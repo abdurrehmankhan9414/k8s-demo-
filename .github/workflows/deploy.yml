@@ -7,41 +7,43 @@ on:
 
 jobs:
   build-and-deploy:
-    runs-on: self-hosted
+    runs-on: self-hosted   # your self-hosted runner
 
     steps:
-      # Checkout code
+      # Step 1: Checkout code
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Docker login
+      # Step 2: Docker login
       - name: Docker Login
         run: |
           echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
           echo "✅ Docker login successful"
 
-      # Build Docker image
+      # Step 3: Build Docker image
       - name: Build Docker image
         run: |
           IMAGE="${{ secrets.DOCKER_USERNAME }}/my-nginx:latest"
           echo "Building image: $IMAGE"
           docker build -t $IMAGE .
 
-      # Push Docker image
+      # Step 4: Push Docker image
       - name: Push Docker image
         run: |
           IMAGE="${{ secrets.DOCKER_USERNAME }}/my-nginx:latest"
           echo "Pushing image: $IMAGE"
           docker push $IMAGE
 
-      # Deploy to Kubernetes
+      # Step 5: Deploy to Kubernetes
       - name: Deploy to Kubernetes
         run: |
           IMAGE="${{ secrets.DOCKER_USERNAME }}/my-nginx:latest"
+          # Replace image in deployment.yaml
           sed -i "s|image: .*|image: $IMAGE|" k8s/deployment.yaml
+          # Apply all configs
           kubectl apply -f k8s/
 
-      # Verify rollout
+      # Step 6: Verify rollout
       - name: Verify Deployment
         run: |
           kubectl rollout status deployment/my-nginx
