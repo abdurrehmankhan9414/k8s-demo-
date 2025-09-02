@@ -1,32 +1,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: my-nginx 
+  name: my-nginx
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
-      app: demo
+      app: my-nginx
   template:
     metadata:
       labels:
-        app: demo
+        app: my-nginx
     spec:
-      serviceAccountName: demo-sa
       containers:
-        - name: nginx
-          image: REPLACE_WITH_DOCKER_USERNAME/my-nginx:latest
-          imagePullPolicy: Always
+        - name: my-nginx
+          image: nginx:latest  # placeholder, replaced automatically in workflow
           ports:
             - containerPort: 80
-          env:
-            - name: APP_MESSAGE
-              valueFrom:
-                configMapKeyRef:
-                  name: demo-config
-                  key: APP_MESSAGE
-            - name: DEMO_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: demo-secret
-                  key: DEMO_PASSWORD
