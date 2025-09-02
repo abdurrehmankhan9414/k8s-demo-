@@ -1,0 +1,50 @@
+name: CI/CD with Minikube (Self-hosted)
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-deploy:
+    runs-on: self-hosted
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show tool versions
+        run: |
+          docker --version
+          kubectl version --client --output=yaml || true
+          minikube version
+
+      - name: Ensure Minikube is running (with Calico)
+        run: |
+          if ! minikube status >/dev/null 2>&1; then
+            minikube start --driver=docker --cni=calico
+          fi
+          kubectl config use-context minikube
+          kubectl cluster-info
+
+      - name: Docker Hub login (no prompts)
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+      - name: Build & push image
+        run: |
+          IMAGE="${{ secrets.DOCKER_USERNAME }}/my-nginx:latest"
+          docker build -t "$IMAGE" .
+          docker push "$IMAGE"
+
+      - name: Prepare manifests with your Docker Hub username (no repo changes)
+        run: |
+          rm -rf k8s_rendered && mkdir k8s_rendered
+          cp -r k8s/* k8s_rendered/
+          sed -i "s|REPLACE_WITH_DOCKER_USERNAME|${{ secrets.DOCKER_USERNAME }}|g" k8s_rendered/deployment.yaml
+
+      - name: Apply Kubernetes manifests
+        run: |
+          kubectl apply -f k8s_rendered/
+          kubectl rollout status deployment/demo-app --timeout=180s
+
+      - name: Show service URL
+        run: |
+          minikube service demo-service --url
